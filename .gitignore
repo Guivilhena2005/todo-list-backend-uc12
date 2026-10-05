@@ -1,0 +1,13 @@
+# Arquivos compilados em bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+# Configurações de ambiente virtual
+env
+venv
+env/
+venv/
+.pytest_cache/
+*.db
+*.db.journal init
+*.sqlite3
