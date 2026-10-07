@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 # Configurações de ambiente virtual
+venv
 .env
 .venv
 .env/
