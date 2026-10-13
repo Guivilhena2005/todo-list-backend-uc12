@@ -41,43 +41,48 @@ class UsuarioRepositorio(RepositorioBase[Usuario]):
     def email_existe( self, email: str) -> bool:
         return self.Buscar_por_email(email) is not None
    
-    @dataclass(frozen=True)
-    class FiltroTarefas:
-        Usuario_id : int
-        status : StatusTarefa | None = None
-        prioridade: PrioridadeTarefa | None = None
-        prazo_ate: date | None = None
-        ordenar_por: CampoOrdenacao = CampoOrdenacao.CRIADO_EM
-        ordem: Ordem = Ordem.DESC
-        limite: int = 50
-        deslocamento = int = 0
-    class TarefaRepositorio(RepositorioBase[Tarefa]):
-        _ORDEM_POR_PRIORIDADE = case(
-            PrioridadeTarefa.mapa_de_pesos(), value=Tarefa.prioridade, else_=99
+@dataclass(frozen=True)
+class FiltroTarefas:
+    Usuario_id : int
+    status : StatusTarefa | None = None
+    prioridade: PrioridadeTarefa | None = None
+    prazo_ate: date | None = None
+    ordenar_por: CampoOrdenacao = CampoOrdenacao.CRIADO_EM
+    ordem: Ordem = Ordem.DESC
+    limite: int = 50
+    deslocamento = int = 0
+class TarefaRepositorio(RepositorioBase[Tarefa]):
+    _ORDEM_POR_PRIORIDADE = case(
+        PrioridadeTarefa.mapa_de_pesos(), value=Tarefa.prioridade, else_=99
+    )
+    @property
+    def modelo(self) -> type[Tarefa]:
+        return Tarefa
+    def _coluna_de_ordenacao (self, campo: CampoOrdenacao):
+        colunas = {
+            CampoOrdenacao.CRIADO_EM: Tarefa.criado_em,
+            CampoOrdenacao.PRAZO: Tarefa.prazo,
+            CampoOrdenacao.PRIORIDADE: self._ORDEM_POR_PRIORIDADE,
+        }
+        return colunas[campo]
+    def listar(self, filtro: Filtrotarefas) -> list[Tarefa]:
+        consulta = self._sessao.query(Tarefa).filter(
+            Tarefa.Usuario_id == filtro.usario_id
         )
-        @property
-        def modelo(self) -> type[Tarefa]:
-            return Tarefa
-        def _coluna_de_ordenacao (sel, campo: CampoOrdenacao):
-            colunas = {
-                CampoOrdenacao.CRIADO_EM: Tarefa.criado_em,
-                CampoOrdenacao.PRAZO: Tarefa.prazo,
-                CampoOrdenacao.PRIORIDADE: self._ORDEM_POR_PRIORIDADE,
-            }
-            return colunas[campo]
-        def listar(self, filtro: Filtrotarefas) -> list[Tarefa]:
-            consulta = self._sessao.query(Tarefa).filter(
-                Tarefa.Usuario_id == filtro.usario_id
+        if filtro.status is not None:
+            consulta = consulta.filter(
+                Tarefa.status == filtro.status.value
             )
-            if filtro.status is not None:
-                consulta = consulta.filter(Tarefa._status == filtro.status.value)
-            if filtro.prioridade is not None:
-                consulta = consulta.filter(Tarefa.prioridade == filtro.prioridade.value)
-            if filtro.prazo_ate is not None:
-                consulta = consulta.filter(Tarefa.prazo != None , Tarefa.prazo <=  filtro.prazo_ate)
-            coluna = self._coluna_de_ordenacao(filtro.ordenar_por)
-            consulta = consulta.order_by(coluna.desc()
-                                         if filtro.ordem is Ordem.DESC
-                                         else coluna.asc())
-                                         
-            return(consulta.offset(filtro.deslocamento).limit(filtro.limite))
+        if filtro.prioridade is not None:
+            consulta = consulta.filter(
+                Tarefa.prioridade == filtro.prioridade.value
+            )
+        if filtro.prazo_ate is not None:
+            consulta = consulta.filter(
+                Tarefa.prazo != None, Tarefa.prazo <= filtro.prazo_ate
+            )
+        coluna = self._coluna_de_ordenacao(filtro.ordenar_por)
+        consulta = consulta.order_by(colun.desc()
+                                        if filtro.ordem is Ordem.DESC
+                                        else coluna.asc())
+        return(consulta.offset(filtro.deslocamento).limit(filtro.limite).all())
