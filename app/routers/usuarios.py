@@ -36,7 +36,7 @@ def cadastrar_usuario(
     "/login",
     response_model=UsuarioOut,
     summary="Autenticar usuário",
-    responses={401: {"description": "E-mail ou senha inválidos"}},
+    responses={401: {"description": "E-mail ou senha inválidoss"}},
 )
 def autenticar_usuario(
     dados: UsuarioLogin,
